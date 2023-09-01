@@ -184,3 +184,92 @@ call clinica.InsertarCitaAgendarCita
 select * from clinica.cita;
 select * from clinica.agendar_cita;
 
+-- diagnostico
+create or replace procedure clinica.intertarDiagnostico
+( idEspecialista clinica.id_meespecialista, idPaciente clinica.id_paciente, edad char(3), peso char(3),
+altura char(3),presionArterial char(6), diagnostico varchar(100), recetario varchar(100)  )
+language plpgsql
+as $$
+declare
+	imc real;
+	pesoNum int;
+	alturaNum real;
+	nivelPeso char(10);
+	fechaCreacion timestamp := ( select left(cast(current_timestamp as char(30)),19) );
+begin
+	pesoNum := peso;
+	alturaNum := altura;
+	imc := pesoNum / (alturaNum * alturaNum);
+	imc := cast(imc as char(5));
+	
+	if imc < '18.5' then
+		nivelPeso = 'BAJO';
+	elseif imc between '18.5' and '24.9' then
+		nivelPeso = 'NORMAL';
+	elseif imc between '25.0' and '29.9' then
+		nivelPeso = 'SOBREPESO';
+	else
+		nivelPeso = 'OBESIDAD';
+	end if;
+	
+	insert into clinica.expediente_diagnostico(
+	fk_idEspecialista,fk_idPaciente,edad, peso,altura,imc,nivelPeso,presionArterial,
+	diagnostico,recetario,fechaCreacion)
+	values(idEspecialista,idPaciente,edad,peso,altura,imc,nivelPeso,presionArterial,
+		  diagnostico,recetario,fechaCreacion);
+	
+	raise notice 'Expediente diagnostico ingresado correctamente.';
+	
+end;$$
+
+call clinica.intertarDiagnostico
+( 'ME-0001','P-0003','20','80','1.78','120/70','NA','NA' );
+
+select * from clinica.expediente_diagnostico;
+
+-- cancelar cita
+create or replace procedure clinica.CitaStatusCancelada(idCita clinica.id_cita)
+language plpgsql
+as $$
+declare
+	status char(10) := (select status from clinica.agendar_cita where fk_idcita = idCita);
+begin
+	
+	if not exists (select pk_idCita from clinica.cita where pk_idCita = idCita) then
+		raise notice 'El id de cita no existe.';
+	elseif status = 'REALIZADO' then
+		raise notice 'La cita ya ha sido realizada.';
+	else
+		update clinica.agendar_cita set status = 'CANCELADA'
+		where fk_idCita = idCita;
+		
+		raise notice 'Cita cancelada exitosamente.';
+	end if;
+end;$$
+
+call clinica.CitaStatusCancelada('CM-0210');
+
+select * from clinica.agendar_cita;
+
+-- realizar cita
+create or replace procedure clinica.CitaStatusRealizada(idCita clinica.id_Cita)
+language plpgsql
+as $$
+declare
+	status char(10) := ( select status from clinica.agendar_cita where fk_idCita = idCita ) ;
+begin
+
+	if not exists ( select pk_idCita from clinica.cita where pk_idCita = idCita ) then
+		raise notice 'El id de la cita no existe.';
+	elseif status = 'CANCELADA' then
+		raise notice 'La cita ya ha sido cancelada.';
+	else
+		update clinica.agendar_cita set status = 'REALIZADA'
+		where fk_idCita = idCita;
+		
+		raise notice 'Cita realizada correctamente.';
+	end if;
+end; $$
+
+call clinica.CitaStatusRealizada('CM-0010');
+select * from clinica.agendar_cita;
