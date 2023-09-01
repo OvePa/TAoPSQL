@@ -1,0 +1,5 @@
+CHECK (VALUE ~ '^[P]{1}[-]{1}\d{4}$');
+
+CHECK (VALUE ~ '^[ME]{2}[-]{1}\d{4}$');
+
+CHECK (VALUE ~ '^[CM]{2}[-]{1}\d{4}$');
